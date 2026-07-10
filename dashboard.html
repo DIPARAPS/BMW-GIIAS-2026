@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BMW GIIAS 2026 — Supervisor Dashboard</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --black:#111;--white:#fff;--bg:#F5F4F0;--surface:#fff;
+  --border:#E5E3DC;--muted:#888780;--radius:10px;--radius-sm:6px;
+  --green-bg:#EAF3DE;--green-tx:#27500A;--green-bd:#C0DD97;
+  --amber-bg:#FAEEDA;--amber-tx:#633806;--amber-bd:#FAC775;
+  --red-bg:  #FCEBEB;--red-tx:  #791F1F;--red-bd:  #F7C1C1;
+  --blue-bg: #E6F1FB;--blue-tx: #0C447C;--blue-bd: #B5D4F4;
+  --purple-bg:#F1E9FB;--purple-tx:#5B21A6;--purple-bd:#D2B8F5;
+  --gray-bg: #F1EFE8;--gray-tx: #444441;
+}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  background:var(--bg);color:var(--black);min-height:100vh}
+
+/* ══ PIN LOCK ══ */
+.lock-overlay{position:fixed;inset:0;z-index:300;background:var(--black);
+  display:flex;align-items:center;justify-content:center}
+.lock-overlay.hidden{display:none}
+.lock-card{width:320px;max-width:90vw;text-align:center;padding:0 24px}
+.lock-logo{font-size:13px;font-weight:600;letter-spacing:.14em;
+  text-transform:uppercase;color:rgba(255,255,255,.35);margin-bottom:4px}
+.lock-title{font-size:22px;font-weight:700;color:var(--white);margin-bottom:6px}
+.lock-sub{font-size:13px;color:rgba(255,255,255,.4);margin-bottom:32px}
+.pin-dots{display:flex;gap:12px;justify-content:center;margin-bottom:28px}
+.pin-dot{width:16px;height:16px;border-radius:50%;
+  border:2px solid rgba(255,255,255,.2);background:transparent;transition:all .15s}
+.pin-dot.filled{background:var(--white);border-color:var(--white)}
+.pin-dot.error {background:#ef4444;border-color:#ef4444}
+.numpad{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px}
+.numkey{padding:18px;font-size:20px;font-weight:500;border-radius:var(--radius);
+  border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.06);color:var(--white);
+  cursor:pointer;transition:all .12s;user-select:none}
+.numkey:hover{background:rgba(255,255,255,.12)}
+.numkey:active{transform:scale(.94)}
+.numkey.del{font-size:15px;color:rgba(255,255,255,.5)}
+.pin-msg{font-size:13px;min-height:20px;color:#ef4444;margin-bottom:4px}
+
+/* ══ TOPNAV ══ */
+.topnav{background:var(--black);height:52px;padding:0 20px;
+  display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.nav-brand{font-size:13px;font-weight:700;color:var(--white);letter-spacing:.06em}
+.nav-brand span{opacity:.35;margin:0 8px}
+.nav-tabs{display:flex;gap:2px}
+.nav-tab{padding:6px 13px;font-size:13px;border-radius:6px;cursor:pointer;
+  color:rgba(255,255,255,.45);background:transparent;border:none;transition:all .15s}
+.nav-tab:hover{color:rgba(255,255,255,.8);background:rgba(255,255,255,.08)}
+.nav-tab.active{color:var(--white);background:rgba(255,255,255,.14)}
+.live-pill{display:flex;align-items:center;gap:6px;font-size:12px;color:rgba(255,255,255,.45)}
+.live-dot{width:6px;height:6px;border-radius:50%;background:#4ade80;animation:pulse 1.8s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.2}}
+
+/* ══ ROLE SWITCHER ══ */
+.role-switch{display:flex;gap:4px;background:var(--surface);border:1px solid var(--border);
+  border-radius:999px;padding:3px;width:fit-content;margin-bottom:20px}
+.role-btn{padding:7px 20px;font-size:13px;font-weight:600;border-radius:999px;
+  border:none;background:transparent;cursor:pointer;color:var(--muted);transition:all .15s}
+.role-btn.active-bc{background:var(--blue-bg);color:var(--blue-tx)}
+.role-btn.active-ss{background:var(--purple-bg);color:var(--purple-tx)}
+.role-btn.active-all{background:var(--black);color:var(--white)}
+
+/* ══ PAGES ══ */
+.page{display:none}.page.active{display:block}
+.wrap{padding:24px;max-width:980px;margin:0 auto}
+.page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px}
+.page-title{font-size:18px;font-weight:700}
+.page-sub{font-size:13px;color:var(--muted);margin-top:2px}
+
+.btn-refresh{display:flex;align-items:center;gap:6px;font-size:13px;padding:8px 16px;
+  border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);
+  cursor:pointer;color:var(--black);transition:all .15s}
+.btn-refresh:hover{border-color:var(--black)}
+.btn-refresh svg{width:14px;height:14px}
+.btn-refresh.spin svg{animation:rot .7s linear infinite}
+@keyframes rot{to{transform:rotate(360deg)}}
+
+/* ══ SUMMARY BAR (BC+SS gabungan) ══ */
+.summary-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px}
+@media(max-width:640px){.summary-row{grid-template-columns:1fr}}
+.summary-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px}
+.summary-role{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.role-dot{width:8px;height:8px;border-radius:50%}
+.dot-bc{background:var(--blue-tx)}
+.dot-ss{background:var(--purple-tx)}
+.summary-role-label{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+.summary-nums{display:flex;justify-content:space-between;align-items:baseline}
+.summary-hadir{font-size:26px;font-weight:800}
+.summary-pct{font-size:13px;color:var(--muted)}
+
+/* ══ METRICS ══ */
+.metric-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+@media(max-width:640px){.metric-grid{grid-template-columns:repeat(2,1fr)}}
+.m-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px}
+.m-lbl{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:8px}
+.m-val{font-size:28px;font-weight:800;line-height:1}
+.m-sub{font-size:12px;color:var(--muted);margin-top:4px}
+.c-green{color:#27500A}.c-amber{color:#633806}.c-red{color:#791F1F}
+
+/* ══ CARDS ══ */
+.card-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+@media(max-width:640px){.card-row{grid-template-columns:1fr}}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px}
+.card-title{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:14px}
+
+.prog-item{margin-bottom:14px}.prog-item:last-child{margin-bottom:0}
+.prog-row{display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px}
+.prog-cnt{color:var(--muted)}
+.prog-track{height:7px;background:var(--bg);border-radius:999px;overflow:hidden}
+.prog-fill{height:100%;border-radius:999px;transition:width .6s ease}
+.pf-pagi{background:var(--black)}.pf-sore{background:#888}
+
+.donut-wrap{display:flex;align-items:center;gap:18px}
+.leg-row{display:flex;align-items:center;gap:8px;font-size:13px;margin-bottom:8px}
+.leg-row:last-child{margin-bottom:0}
+.ldot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+
+.tab-filter{display:flex;gap:4px}
+.tab-btn{padding:5px 14px;font-size:12px;border-radius:999px;
+  border:1px solid var(--border);background:var(--surface);cursor:pointer;color:var(--muted);transition:all .12s}
+.tab-btn:hover{border-color:var(--black);color:var(--black)}
+.tab-btn.active{background:var(--black);border-color:var(--black);color:var(--white)}
+
+.tbl-scroll{overflow-x:auto}
+.data-table{width:100%;border-collapse:collapse;font-size:13px}
+.data-table th{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);
+  text-align:left;padding:0 0 8px;border-bottom:1px solid var(--border);font-weight:500}
+.data-table td{padding:9px 0;border-bottom:1px solid var(--border);vertical-align:middle}
+.data-table tr:last-child td{border-bottom:none}
+.fw{font-weight:600}.mono{font-family:monospace;font-size:12px;color:var(--muted)}
+
+.badge{display:inline-block;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:600}
+.bg-green{background:var(--green-bg);color:var(--green-tx)}
+.bg-amber{background:var(--amber-bg);color:var(--amber-tx)}
+.bg-blue {background:var(--blue-bg);color:var(--blue-tx)}
+.bg-purple{background:var(--purple-bg);color:var(--purple-tx)}
+.bg-gray {background:var(--gray-bg);color:var(--gray-tx)}
+
+.av{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;
+  justify-content:center;font-size:11px;font-weight:700;flex-shrink:0}
+.av-blue{background:var(--blue-bg);color:var(--blue-tx)}
+.av-red {background:var(--red-bg);color:var(--red-tx)}
+.ab-row{display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid var(--border)}
+.ab-row:last-child{border-bottom:none}
+.ab-info{flex:1;min-width:0}
+.ab-name{font-weight:600;font-size:13px}
+.ab-sub{font-size:11px;color:var(--muted);margin-top:1px}
+
+.spinner-wrap{text-align:center;padding:40px}
+.spinner{width:24px;height:24px;border:2px solid var(--border);border-top-color:var(--black);
+  border-radius:50%;animation:rot .7s linear infinite;margin:0 auto 10px}
+.empty{text-align:center;padding:32px;color:var(--muted);font-size:13px}
+</style>
+</head>
+<body>
+
+<!-- ══ PIN LOCK ══ -->
+<div class="lock-overlay" id="lock">
+  <div class="lock-card">
+    <div class="lock-logo">BMW GIIAS 2026</div>
+    <div class="lock-title">Supervisor Dashboard</div>
+    <div class="lock-sub">Masukkan PIN 4 digit untuk melanjutkan</div>
+    <div class="pin-dots">
+      <div class="pin-dot" id="d0"></div>
+      <div class="pin-dot" id="d1"></div>
+      <div class="pin-dot" id="d2"></div>
+      <div class="pin-dot" id="d3"></div>
+    </div>
+    <div class="numpad">
+      <button class="numkey" onclick="pk('1')">1</button>
+      <button class="numkey" onclick="pk('2')">2</button>
+      <button class="numkey" onclick="pk('3')">3</button>
+      <button class="numkey" onclick="pk('4')">4</button>
+      <button class="numkey" onclick="pk('5')">5</button>
+      <button class="numkey" onclick="pk('6')">6</button>
+      <button class="numkey" onclick="pk('7')">7</button>
+      <button class="numkey" onclick="pk('8')">8</button>
+      <button class="numkey" onclick="pk('9')">9</button>
+      <button class="numkey del" onclick="pk('del')">⌫</button>
+      <button class="numkey" onclick="pk('0')">0</button>
+      <button class="numkey del" onclick="pk('clr')">C</button>
+    </div>
+    <div class="pin-msg" id="pin-msg"></div>
+  </div>
+</div>
+
+<!-- ══ TOPNAV ══ -->
+<nav class="topnav">
+  <div class="nav-brand">BMW<span>|</span>GIIAS 2026</div>
+  <div class="nav-tabs">
+    <button class="nav-tab active" onclick="go('dashboard',this)">Dashboard</button>
+    <button class="nav-tab" onclick="go('absent',this)">Belum Hadir</button>
+    <button class="nav-tab" onclick="go('log',this)">Log</button>
+  </div>
+  <div class="live-pill"><div class="live-dot"></div><span id="live-txt">—</span></div>
+</nav>
+
+<!-- ══ DASHBOARD ══ -->
+<div id="page-dashboard" class="page active">
+  <div class="wrap">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Supervisor Dashboard</div>
+        <div class="page-sub" id="dash-ts">—</div>
+      </div>
+      <button class="btn-refresh" id="btn-rd" onclick="loadDashboard()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
+          <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+        </svg>
+        Refresh
+      </button>
+    </div>
+
+    <!-- Ringkasan BC vs SS -->
+    <div class="summary-row">
+      <div class="summary-card">
+        <div class="summary-role">
+          <div class="role-dot dot-bc"></div>
+          <div class="summary-role-label" style="color:var(--blue-tx)">Business Consultant</div>
+        </div>
+        <div class="summary-nums">
+          <div class="summary-hadir c-green" id="bc-hadir">—</div>
+          <div class="summary-pct"><span id="bc-total">—</span> total · <span id="bc-pct">—</span></div>
+        </div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-role">
+          <div class="role-dot dot-ss"></div>
+          <div class="summary-role-label" style="color:var(--purple-tx)">Sales Supervisor</div>
+        </div>
+        <div class="summary-nums">
+          <div class="summary-hadir c-green" id="ss-hadir">—</div>
+          <div class="summary-pct"><span id="ss-total">—</span> total · <span id="ss-pct">—</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Role switcher untuk detail -->
+    <div class="role-switch">
+      <button class="role-btn active-bc" id="rb-bc" onclick="switchRole('bc')">BC Detail</button>
+      <button class="role-btn" id="rb-ss" onclick="switchRole('ss')">SS Detail</button>
+    </div>
+
+    <div class="metric-grid">
+      <div class="m-card"><div class="m-lbl">Total</div><div class="m-val" id="m-total">—</div><div class="m-sub" id="m-role-label">terdaftar</div></div>
+      <div class="m-card"><div class="m-lbl">Hadir</div><div class="m-val c-green" id="m-hadir">—</div><div class="m-sub" id="m-pct">—</div></div>
+      <div class="m-card"><div class="m-lbl">Terlambat</div><div class="m-val c-amber" id="m-late">—</div><div class="m-sub">melewati batas shift</div></div>
+      <div class="m-card"><div class="m-lbl">Belum Hadir</div><div class="m-val c-red" id="m-absent">—</div><div class="m-sub">perlu dicari</div></div>
+    </div>
+
+    <div class="card-row">
+      <div class="card">
+        <div class="card-title">Kehadiran per shift</div>
+        <div class="prog-item">
+          <div class="prog-row"><span>Pagi</span><span class="prog-cnt" id="pp-cnt">0 / 0</span></div>
+          <div class="prog-track"><div class="prog-fill pf-pagi" id="pp-bar" style="width:0%"></div></div>
+        </div>
+        <div class="prog-item">
+          <div class="prog-row"><span>Sore</span><span class="prog-cnt" id="ps-cnt">0 / 0</span></div>
+          <div class="prog-track"><div class="prog-fill pf-sore" id="ps-bar" style="width:0%"></div></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Status kehadiran</div>
+        <div class="donut-wrap">
+          <svg width="90" height="90" viewBox="0 0 90 90" style="flex-shrink:0">
+            <circle cx="45" cy="45" r="34" fill="none" stroke="#F1EFE8" stroke-width="14"/>
+            <circle id="donut-late" cx="45" cy="45" r="34" fill="none" stroke="#EF9F27"
+              stroke-width="14" stroke-dasharray="0 213.6" stroke-linecap="butt"
+              transform="rotate(-90 45 45)" style="transition:stroke-dasharray .6s"/>
+            <circle id="donut-ok" cx="45" cy="45" r="34" fill="none" stroke="#111"
+              stroke-width="14" stroke-dasharray="0 213.6" stroke-linecap="butt"
+              transform="rotate(-90 45 45)" style="transition:stroke-dasharray .6s"/>
+            <text x="45" y="42" text-anchor="middle" font-size="15" font-weight="800" fill="#111" id="donut-pct">0%</text>
+            <text x="45" y="56" text-anchor="middle" font-size="9" fill="#888">hadir</text>
+          </svg>
+          <div>
+            <div class="leg-row"><div class="ldot" style="background:#111"></div>Tepat Waktu&nbsp;<strong id="leg-ok">0</strong></div>
+            <div class="leg-row"><div class="ldot" style="background:#EF9F27"></div>Terlambat&nbsp;<strong id="leg-late">0</strong></div>
+            <div class="leg-row"><div class="ldot" style="background:#F1EFE8;border:1px solid #ccc"></div>Belum Hadir&nbsp;<strong id="leg-abs">0</strong></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ BELUM HADIR ══ -->
+<div id="page-absent" class="page">
+  <div class="wrap">
+    <div class="page-header">
+      <div><div class="page-title">Belum Check-In</div><div class="page-sub" id="abs-sub">—</div></div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <div class="role-switch" style="margin-bottom:0">
+          <button class="role-btn active-bc" id="arb-bc" onclick="switchAbsRole('bc')">BC</button>
+          <button class="role-btn" id="arb-ss" onclick="switchAbsRole('ss')">SS</button>
+        </div>
+        <button class="btn-refresh" onclick="loadAbsent()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+               stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
+            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+          </svg>
+          Refresh
+        </button>
+      </div>
+    </div>
+    <div class="card"><div id="abs-list"><div class="spinner-wrap"><div class="spinner"></div><p>Memuat…</p></div></div></div>
+  </div>
+</div>
+
+<!-- ══ LOG ══ -->
+<div id="page-log" class="page">
+  <div class="wrap">
+    <div class="page-header">
+      <div><div class="page-title">Log Absensi Hari Ini</div><div class="page-sub" id="log-sub">—</div></div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <div class="role-switch" style="margin-bottom:0">
+          <button class="role-btn active-bc" id="lrb-bc" onclick="switchLogRole('bc')">BC</button>
+          <button class="role-btn" id="lrb-ss" onclick="switchLogRole('ss')">SS</button>
+        </div>
+        <button class="btn-refresh" onclick="loadLog()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+               stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
+            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+          </svg>
+          Refresh
+        </button>
+      </div>
+    </div>
+    <div class="card tbl-scroll">
+      <table class="data-table">
+        <thead><tr><th>Jam</th><th>Nama</th><th>No ID</th><th>Dealer</th><th>Outlet</th><th>Shift</th><th>Status</th></tr></thead>
+        <tbody id="log-tbody">
+          <tr><td colspan="7"><div class="spinner-wrap"><div class="spinner"></div><p>Memuat…</p></div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+const GAS_URL = "GANTI_DENGAN_WEB_APP_URL_DARI_GOOGLE_APPS_SCRIPT";
+
+// ── PIN ──
+let pinBuf = "";
+function pk(k) {
+  const msg = document.getElementById("pin-msg");
+  msg.textContent = "";
+  for (let i=0;i<4;i++) document.getElementById("d"+i).classList.remove("error");
+  if (k==="del") { pinBuf=pinBuf.slice(0,-1); updDots(); return; }
+  if (k==="clr") { pinBuf=""; updDots(); return; }
+  if (pinBuf.length>=4) return;
+  pinBuf+=k; updDots();
+  if (pinBuf.length===4) verifyPin();
+}
+function updDots(){for(let i=0;i<4;i++) document.getElementById("d"+i).classList.toggle("filled",i<pinBuf.length)}
+
+async function verifyPin(){
+  const msg=document.getElementById("pin-msg");
+  msg.textContent="Memverifikasi…"; msg.style.color="rgba(255,255,255,.4)";
+  try{
+    const res=await api({action:"verifyPin",pin:pinBuf});
+    if(res.success){
+      document.getElementById("lock").classList.add("hidden");
+      loadDashboard(); startAutoRefresh();
+    } else {
+      for(let i=0;i<4;i++) document.getElementById("d"+i).classList.add("error");
+      msg.textContent=res.message||"PIN salah."; msg.style.color="#ef4444";
+      setTimeout(()=>{pinBuf="";updDots();for(let i=0;i<4;i++)document.getElementById("d"+i).classList.remove("error");msg.textContent=""},1200);
+    }
+  }catch(e){msg.textContent="Gagal: "+e.message;msg.style.color="#ef4444";pinBuf="";updDots()}
+}
+document.addEventListener("keydown",e=>{
+  if(document.getElementById("lock").classList.contains("hidden"))return;
+  if(e.key>="0"&&e.key<="9")pk(e.key);
+  if(e.key==="Backspace")pk("del");
+});
+
+// ── NAV ──
+function go(id,el){
+  document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
+  document.querySelectorAll(".nav-tab").forEach(t=>t.classList.remove("active"));
+  document.getElementById("page-"+id).classList.add("active");
+  el.classList.add("active");
+  if(id==="dashboard")loadDashboard();
+  if(id==="absent")loadAbsent();
+  if(id==="log")loadLog();
+}
+
+// ── API ──
+async function api(params){
+  const qs=new URLSearchParams(params).toString();
+  const res=await fetch(GAS_URL+"?"+qs,{method:"GET",redirect:"follow"});
+  const txt=await res.text();
+  if(!txt||txt.trim().startsWith("<"))throw new Error("Server tidak merespons JSON.");
+  return JSON.parse(txt);
+}
+
+// ── DASHBOARD ──
+let currentRole = "bc";
+let lastDashData = null;
+
+async function loadDashboard(){
+  const btn=document.getElementById("btn-rd");
+  btn.classList.add("spin");
+  try{
+    const res=await api({action:"getDashboard"});
+    if(!res.success)return;
+    lastDashData = res.data;
+    renderSummary(res.data);
+    renderDetail(currentRole);
+
+    const now=new Date();
+    document.getElementById("dash-ts").textContent="Update terakhir: "+pad(now.getHours())+":"+pad(now.getMinutes())+" WIB";
+
+    const totalHadir = res.data.bc.hadir + res.data.ss.hadir;
+    const totalAll    = res.data.bc.total + res.data.ss.total;
+    document.getElementById("live-txt").textContent = totalHadir+"/"+totalAll+" hadir";
+  }catch(e){
+    document.getElementById("dash-ts").textContent="Gagal memuat: "+e.message;
+  }
+  btn.classList.remove("spin");
+}
+
+function renderSummary(data){
+  document.getElementById("bc-hadir").textContent = data.bc.hadir;
+  document.getElementById("bc-total").textContent = data.bc.total;
+  document.getElementById("bc-pct").textContent   = data.bc.persentase+"%";
+
+  document.getElementById("ss-hadir").textContent = data.ss.hadir;
+  document.getElementById("ss-total").textContent = data.ss.total;
+  document.getElementById("ss-pct").textContent   = data.ss.persentase+"%";
+}
+
+function switchRole(role){
+  currentRole = role;
+  document.getElementById("rb-bc").className = role==="bc" ? "role-btn active-bc" : "role-btn";
+  document.getElementById("rb-ss").className = role==="ss" ? "role-btn active-ss" : "role-btn";
+  if (lastDashData) renderDetail(role);
+}
+
+function renderDetail(role){
+  if (!lastDashData) return;
+  const d = lastDashData[role];
+  const label = role === "bc" ? "Business Consultant" : "Sales Supervisor";
+
+  document.getElementById("m-total").textContent   = d.total;
+  document.getElementById("m-role-label").textContent = label + " terdaftar";
+  document.getElementById("m-hadir").textContent   = d.hadir;
+  document.getElementById("m-pct").textContent     = d.persentase+"% kehadiran";
+  document.getElementById("m-late").textContent    = d.late;
+  document.getElementById("m-absent").textContent  = d.absent;
+
+  const pP = d.totalPagi > 0 ? Math.round(d.pagi/d.totalPagi*100) : 0;
+  const sP = d.totalSore > 0 ? Math.round(d.sore/d.totalSore*100) : 0;
+  document.getElementById("pp-cnt").textContent = d.pagi+" / "+d.totalPagi;
+  document.getElementById("ps-cnt").textContent = d.sore+" / "+d.totalSore;
+  document.getElementById("pp-bar").style.width = pP+"%";
+  document.getElementById("ps-bar").style.width = sP+"%";
+
+  renderDonut(d);
+
+  const tepat = Math.max(0, d.hadir - d.late);
+  document.getElementById("leg-ok").textContent   = tepat;
+  document.getElementById("leg-late").textContent = d.late;
+  document.getElementById("leg-abs").textContent  = d.absent;
+}
+
+function renderDonut(d){
+  const C=213.6, T=d.total||1;
+  const tepat=Math.max(0,d.hadir-d.late);
+  const aOk=tepat/T*C, aLate=d.late/T*C, degOk=tepat/T*360;
+  document.getElementById("donut-ok").setAttribute("stroke-dasharray",aOk.toFixed(1)+" "+(C-aOk).toFixed(1));
+  const lateEl=document.getElementById("donut-late");
+  lateEl.setAttribute("stroke-dasharray",aLate.toFixed(1)+" "+(C-aLate).toFixed(1));
+  lateEl.setAttribute("transform","rotate("+(-90+degOk)+" 45 45)");
+  document.getElementById("donut-pct").textContent=d.persentase+"%";
+}
+
+// ── ABSENT ──
+let absData=[], absRole="bc";
+async function loadAbsent(){
+  document.getElementById("abs-list").innerHTML='<div class="spinner-wrap"><div class="spinner"></div><p>Memuat…</p></div>';
+  try{
+    const res=await api({action:"getAbsent",role:absRole});
+    absData=res.data||[];
+    renderAbsent();
+  }catch(e){document.getElementById("abs-list").innerHTML='<div class="empty">Gagal memuat data.</div>'}
+}
+function switchAbsRole(role){
+  absRole=role;
+  document.getElementById("arb-bc").className = role==="bc" ? "role-btn active-bc" : "role-btn";
+  document.getElementById("arb-ss").className = role==="ss" ? "role-btn active-ss" : "role-btn";
+  loadAbsent();
+}
+function renderAbsent(){
+  document.getElementById("abs-sub").textContent=absData.length+" "+(absRole==="bc"?"BC":"SS")+" belum check-in";
+  if(!absData.length){document.getElementById("abs-list").innerHTML='<div class="empty">✓ Semua sudah check-in!</div>';return}
+  document.getElementById("abs-list").innerHTML=absData.map(r=>{
+    const init=r.nama.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase();
+    const ac=r.shift==="Pagi"?"av-blue":"av-red";
+    const sc=r.shift==="Pagi"?"bg-blue":"bg-amber";
+    return `<div class="ab-row"><div class="av ${ac}">${init}</div>
+      <div class="ab-info"><div class="ab-name">${r.nama}</div><div class="ab-sub">${r.noId} · ${r.dealer} · ${r.outlet}</div></div>
+      <span class="badge ${sc}">${r.shift}</span></div>`;
+  }).join("");
+}
+
+// ── LOG ──
+let logRole="bc";
+async function loadLog(){
+  document.getElementById("log-tbody").innerHTML='<tr><td colspan="7"><div class="spinner-wrap"><div class="spinner"></div><p>Memuat…</p></div></td></tr>';
+  try{
+    const res=await api({action:"getLog",role:logRole});
+    const rows=res.data||[];
+    document.getElementById("log-sub").textContent=rows.length+" entries · "+(logRole==="bc"?"Business Consultant":"Sales Supervisor");
+    if(!rows.length){document.getElementById("log-tbody").innerHTML='<tr><td colspan="7"><div class="empty">Belum ada data hari ini.</div></td></tr>';return}
+    document.getElementById("log-tbody").innerHTML=rows.map(r=>{
+      const sc=r.status==="Terlambat"?"bg-amber":"bg-green";
+      const sh=r.shift==="Pagi"?"bg-blue":"bg-gray";
+      return `<tr><td>${r.timestamp}</td><td class="fw">${r.nama}</td><td class="mono">${r.noId}</td>
+        <td style="color:var(--muted);font-size:12px">${r.dealer}</td>
+        <td style="color:var(--muted);font-size:12px">${r.outlet}</td>
+        <td><span class="badge ${sh}">${r.shift}</span></td>
+        <td><span class="badge ${sc}">${r.status}</span></td></tr>`;
+    }).join("");
+  }catch(e){document.getElementById("log-tbody").innerHTML='<tr><td colspan="7"><div class="empty">Gagal memuat log.</div></td></tr>'}
+}
+function switchLogRole(role){
+  logRole=role;
+  document.getElementById("lrb-bc").className = role==="bc" ? "role-btn active-bc" : "role-btn";
+  document.getElementById("lrb-ss").className = role==="ss" ? "role-btn active-ss" : "role-btn";
+  loadLog();
+}
+
+function startAutoRefresh(){
+  setInterval(()=>{if(document.getElementById("page-dashboard").classList.contains("active"))loadDashboard()},60000);
+}
+function pad(n){return String(n).padStart(2,"0")}
+</script>
+</body>
+</html>

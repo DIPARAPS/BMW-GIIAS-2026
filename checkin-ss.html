@@ -148,7 +148,7 @@ body{
       </div>
     </div>
 
-    <div class="suc-status" id="suc-status">Tepat Waktu</div>
+    <div class="suc-status" id="suc-status">Hadir</div>
     <button class="btn-next" onclick="resetForm()">Check-in berikutnya →</button>
     <div class="countdown-bar" id="countdown-bar"><div class="countdown-fill" id="countdown-fill"></div></div>
   </div>
@@ -216,14 +216,10 @@ function showSuccess(d) {
   document.getElementById("suc-tanggal").textContent = d.tanggal;
   document.getElementById("suc-jam").textContent     = d.jam + " WIB";
 
+  // SS tidak dikenakan aturan waktu — selalu tampil status "Hadir"
   const statusEl = document.getElementById("suc-status");
-  if (d.status === "Terlambat") {
-    statusEl.textContent = "⚠  Terlambat";
-    statusEl.className   = "suc-status st-late";
-  } else {
-    statusEl.textContent = "✓  Tepat Waktu";
-    statusEl.className   = "suc-status st-ok";
-  }
+  statusEl.textContent = "✓  Hadir";
+  statusEl.className   = "suc-status st-ok";
 
   document.getElementById("form-state").style.display    = "none";
   document.getElementById("success-state").style.display = "flex";

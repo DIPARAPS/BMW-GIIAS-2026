@@ -218,6 +218,29 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
       </button>
     </div>
 
+    <!-- Chart lingkaran status kehadiran — dipindah ke paling atas -->
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-title" id="donut-title">Status kehadiran</div>
+      <div class="donut-wrap">
+        <svg width="90" height="90" viewBox="0 0 90 90" style="flex-shrink:0">
+          <circle cx="45" cy="45" r="34" fill="none" stroke="#F1EFE8" stroke-width="14"/>
+          <circle id="donut-late" cx="45" cy="45" r="34" fill="none" stroke="#EF9F27"
+            stroke-width="14" stroke-dasharray="0 213.6" stroke-linecap="butt"
+            transform="rotate(-90 45 45)" style="transition:stroke-dasharray .6s"/>
+          <circle id="donut-ok" cx="45" cy="45" r="34" fill="none" stroke="#111"
+            stroke-width="14" stroke-dasharray="0 213.6" stroke-linecap="butt"
+            transform="rotate(-90 45 45)" style="transition:stroke-dasharray .6s"/>
+          <text x="45" y="42" text-anchor="middle" font-size="15" font-weight="800" fill="#111" id="donut-pct">0%</text>
+          <text x="45" y="56" text-anchor="middle" font-size="9" fill="#888">hadir</text>
+        </svg>
+        <div>
+          <div class="leg-row"><div class="ldot" style="background:#111"></div><span id="leg-ok-label">Tepat Waktu</span>&nbsp;<strong id="leg-ok">0</strong></div>
+          <div class="leg-row" id="leg-late-row"><div class="ldot" style="background:#EF9F27"></div>Terlambat&nbsp;<strong id="leg-late">0</strong></div>
+          <div class="leg-row"><div class="ldot" style="background:#F1EFE8;border:1px solid #ccc"></div>Belum Hadir&nbsp;<strong id="leg-abs">0</strong></div>
+        </div>
+      </div>
+    </div>
+
     <!-- Ringkasan BC vs SS -->
     <div class="summary-row">
       <div class="summary-card">
@@ -248,45 +271,23 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
       <button class="role-btn" id="rb-ss" onclick="switchRole('ss')">SS Detail</button>
     </div>
 
-    <div class="metric-grid">
+    <div class="metric-grid" id="metric-grid-el">
       <div class="m-card"><div class="m-lbl">Total</div><div class="m-val" id="m-total">—</div><div class="m-sub" id="m-role-label">terdaftar</div></div>
       <div class="m-card"><div class="m-lbl">Hadir</div><div class="m-val c-green" id="m-hadir">—</div><div class="m-sub" id="m-pct">—</div></div>
-      <div class="m-card"><div class="m-lbl">Terlambat</div><div class="m-val c-amber" id="m-late">—</div><div class="m-sub">melewati batas shift</div></div>
+      <div class="m-card" id="m-late-card"><div class="m-lbl">Terlambat</div><div class="m-val c-amber" id="m-late">—</div><div class="m-sub" id="m-late-sub">melewati batas shift</div></div>
       <div class="m-card"><div class="m-lbl">Belum Hadir</div><div class="m-val c-red" id="m-absent">—</div><div class="m-sub">perlu dicari</div></div>
     </div>
 
-    <div class="card-row">
-      <div class="card">
-        <div class="card-title">Kehadiran per shift</div>
-        <div class="prog-item">
-          <div class="prog-row"><span>Pagi</span><span class="prog-cnt" id="pp-cnt">0 / 0</span></div>
-          <div class="prog-track"><div class="prog-fill pf-pagi" id="pp-bar" style="width:0%"></div></div>
-        </div>
-        <div class="prog-item">
-          <div class="prog-row"><span>Sore</span><span class="prog-cnt" id="ps-cnt">0 / 0</span></div>
-          <div class="prog-track"><div class="prog-fill pf-sore" id="ps-bar" style="width:0%"></div></div>
-        </div>
+    <!-- Kehadiran per shift -->
+    <div class="card">
+      <div class="card-title">Kehadiran per shift</div>
+      <div class="prog-item">
+        <div class="prog-row"><span>Pagi</span><span class="prog-cnt" id="pp-cnt">0 / 0</span></div>
+        <div class="prog-track"><div class="prog-fill pf-pagi" id="pp-bar" style="width:0%"></div></div>
       </div>
-      <div class="card">
-        <div class="card-title">Status kehadiran</div>
-        <div class="donut-wrap">
-          <svg width="90" height="90" viewBox="0 0 90 90" style="flex-shrink:0">
-            <circle cx="45" cy="45" r="34" fill="none" stroke="#F1EFE8" stroke-width="14"/>
-            <circle id="donut-late" cx="45" cy="45" r="34" fill="none" stroke="#EF9F27"
-              stroke-width="14" stroke-dasharray="0 213.6" stroke-linecap="butt"
-              transform="rotate(-90 45 45)" style="transition:stroke-dasharray .6s"/>
-            <circle id="donut-ok" cx="45" cy="45" r="34" fill="none" stroke="#111"
-              stroke-width="14" stroke-dasharray="0 213.6" stroke-linecap="butt"
-              transform="rotate(-90 45 45)" style="transition:stroke-dasharray .6s"/>
-            <text x="45" y="42" text-anchor="middle" font-size="15" font-weight="800" fill="#111" id="donut-pct">0%</text>
-            <text x="45" y="56" text-anchor="middle" font-size="9" fill="#888">hadir</text>
-          </svg>
-          <div>
-            <div class="leg-row"><div class="ldot" style="background:#111"></div>Tepat Waktu&nbsp;<strong id="leg-ok">0</strong></div>
-            <div class="leg-row"><div class="ldot" style="background:#EF9F27"></div>Terlambat&nbsp;<strong id="leg-late">0</strong></div>
-            <div class="leg-row"><div class="ldot" style="background:#F1EFE8;border:1px solid #ccc"></div>Belum Hadir&nbsp;<strong id="leg-abs">0</strong></div>
-          </div>
-        </div>
+      <div class="prog-item">
+        <div class="prog-row"><span>Sore</span><span class="prog-cnt" id="ps-cnt">0 / 0</span></div>
+        <div class="prog-track"><div class="prog-fill pf-sore" id="ps-bar" style="width:0%"></div></div>
       </div>
     </div>
   </div>
@@ -451,14 +452,36 @@ function switchRole(role){
 function renderDetail(role){
   if (!lastDashData) return;
   const d = lastDashData[role];
-  const label = role === "bc" ? "Business Consultant" : "Sales Supervisor";
+  const label  = role === "bc" ? "Business Consultant" : "Sales Supervisor";
+  const isSS   = role === "ss";
 
   document.getElementById("m-total").textContent   = d.total;
   document.getElementById("m-role-label").textContent = label + " terdaftar";
   document.getElementById("m-hadir").textContent   = d.hadir;
   document.getElementById("m-pct").textContent     = d.persentase+"% kehadiran";
-  document.getElementById("m-late").textContent    = d.late;
   document.getElementById("m-absent").textContent  = d.absent;
+
+  // SS tidak dikenakan aturan waktu — sembunyikan metrik & legenda "Terlambat"
+  const mLateCard = document.getElementById("m-late-card");
+  const legLateRow = document.getElementById("leg-late-row");
+  const legOkLabel = document.getElementById("leg-ok-label");
+  const donutTitle = document.getElementById("donut-title");
+
+  if (isSS) {
+    document.getElementById("m-late").textContent = "—";
+    document.getElementById("m-late-sub").textContent = "tidak ada aturan waktu";
+    mLateCard.style.opacity = ".5";
+    legLateRow.style.display = "none";
+    legOkLabel.textContent = "Hadir";
+    donutTitle.textContent = "Status kehadiran · SS bersifat fleksibel (tanpa batas waktu)";
+  } else {
+    document.getElementById("m-late").textContent = d.late;
+    document.getElementById("m-late-sub").textContent = "melewati batas shift";
+    mLateCard.style.opacity = "1";
+    legLateRow.style.display = "flex";
+    legOkLabel.textContent = "Tepat Waktu";
+    donutTitle.textContent = "Status kehadiran";
+  }
 
   const pP = d.totalPagi > 0 ? Math.round(d.pagi/d.totalPagi*100) : 0;
   const sP = d.totalSore > 0 ? Math.round(d.sore/d.totalSore*100) : 0;

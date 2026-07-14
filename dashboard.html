@@ -338,9 +338,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
     </div>
     <div class="card tbl-scroll">
       <table class="data-table">
-        <thead><tr><th>Jam</th><th>Nama</th><th>No ID</th><th>Dealer</th><th>Outlet</th><th>Shift</th><th>Status</th></tr></thead>
+        <thead><tr><th>Nama</th><th>Dealer</th><th>Outlet</th><th>Shift</th><th>Status</th></tr></thead>
         <tbody id="log-tbody">
-          <tr><td colspan="7"><div class="spinner-wrap"><div class="spinner"></div><p>Memuat…</p></div></td></tr>
+          <tr><td colspan="5"><div class="spinner-wrap"><div class="spinner"></div><p>Memuat…</p></div></td></tr>
         </tbody>
       </table>
     </div>
@@ -420,7 +420,7 @@ async function loadDashboard(){
     renderDetail(currentRole);
 
     const now=new Date();
-    document.getElementById("dash-ts").textContent="Update terakhir: "+pad(now.getHours())+":"+pad(now.getMinutes())+" WIB";
+    document.getElementById("dash-ts").textContent="Update terakhir: "+formatHariTanggal(now)+", "+pad(now.getHours())+":"+pad(now.getMinutes())+" WIB";
 
     const totalHadir = res.data.bc.hadir + res.data.ss.hadir;
     const totalAll    = res.data.bc.total + res.data.ss.total;
@@ -518,22 +518,22 @@ function renderAbsent(){
 // ── LOG ──
 let logRole="bc";
 async function loadLog(){
-  document.getElementById("log-tbody").innerHTML='<tr><td colspan="7"><div class="spinner-wrap"><div class="spinner"></div><p>Memuat…</p></div></td></tr>';
+  document.getElementById("log-tbody").innerHTML='<tr><td colspan="5"><div class="spinner-wrap"><div class="spinner"></div><p>Memuat…</p></div></td></tr>';
   try{
     const res=await api({action:"getLog",role:logRole});
     const rows=res.data||[];
     document.getElementById("log-sub").textContent=rows.length+" entries · "+(logRole==="bc"?"Business Consultant":"Sales Supervisor");
-    if(!rows.length){document.getElementById("log-tbody").innerHTML='<tr><td colspan="7"><div class="empty">Belum ada data hari ini.</div></td></tr>';return}
+    if(!rows.length){document.getElementById("log-tbody").innerHTML='<tr><td colspan="5"><div class="empty">Belum ada data hari ini.</div></td></tr>';return}
     document.getElementById("log-tbody").innerHTML=rows.map(r=>{
       const sc=r.status==="Terlambat"?"bg-amber":"bg-green";
       const sh=r.shift==="Pagi"?"bg-blue":"bg-gray";
-      return `<tr><td>${r.timestamp}</td><td class="fw">${r.nama}</td><td class="mono">${r.noId}</td>
+      return `<tr><td class="fw">${r.nama}</td>
         <td style="color:var(--muted);font-size:12px">${r.dealer}</td>
         <td style="color:var(--muted);font-size:12px">${r.outlet}</td>
         <td><span class="badge ${sh}">${r.shift}</span></td>
         <td><span class="badge ${sc}">${r.status}</span></td></tr>`;
     }).join("");
-  }catch(e){document.getElementById("log-tbody").innerHTML='<tr><td colspan="7"><div class="empty">Gagal memuat log.</div></td></tr>'}
+  }catch(e){document.getElementById("log-tbody").innerHTML='<tr><td colspan="5"><div class="empty">Gagal memuat log.</div></td></tr>'}
 }
 function switchLogRole(role){
   logRole=role;
@@ -546,6 +546,12 @@ function startAutoRefresh(){
   setInterval(()=>{if(document.getElementById("page-dashboard").classList.contains("active"))loadDashboard()},60000);
 }
 function pad(n){return String(n).padStart(2,"0")}
+function formatHariTanggal(date){
+  const hari  = ["Minggu","Senin","Selasa","Rabu","Kamis","Jumat","Sabtu"];
+  const bulan = ["Januari","Februari","Maret","April","Mei","Juni",
+                 "Juli","Agustus","September","Oktober","November","Desember"];
+  return hari[date.getDay()]+", "+date.getDate()+" "+bulan[date.getMonth()]+" "+date.getFullYear();
+}
 </script>
 </body>
 </html>
